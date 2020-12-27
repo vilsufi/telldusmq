@@ -4,6 +4,7 @@
         "ClientId": "TelldusMq",
         "Username": "mquser",
         "Password": "mquser",
+        "CACert": "ca.crt",
         "Events": {
             "PublishTopic": "tellstick/events/{{.Protocol}}/{{.Model}}/{{.House}}/{{.Unit}}/{{.Group}}",
             "PublishPayload": "{{.Method}}",

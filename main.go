@@ -2,10 +2,13 @@ package main
 
 import (
 	"bytes"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"net"
 	"strconv"
@@ -361,6 +364,26 @@ func parseTemplate(templateString string, event *TelldusEvent) string {
 	return tmplBuffer.String()
 }
 
+func createTLSConfig(cafile string) *tls.Config {
+	certpool := x509.NewCertPool()
+	ca, err := ioutil.ReadFile(cafile)
+	if err != nil {
+		log.Panicf("Unable to read CA certificate: %v", err)
+	}
+	certpool.AppendCertsFromPEM(ca)
+
+	tlsConf := &tls.Config{
+		RootCAs: certpool,
+		ClientAuth: tls.NoClientCert,
+		ClientCAs: nil,
+		InsecureSkipVerify: false,
+		MinVersion: tls.VersionTLS12,
+		// Certificates: []tls.Certificate{clientCert},
+	}
+
+	return tlsConf
+}
+
 func setupMqtt() {
 	opts := MQTT.NewClientOptions()
 
@@ -368,6 +391,13 @@ func setupMqtt() {
 	opts.SetClientID(viper.GetString("Mqtt.ClientId"))
 	opts.SetUsername(viper.GetString("Mqtt.Username"))
 	opts.SetPassword(viper.GetString("Mqtt.Password"))
+
+	if(viper.IsSet("Mqtt.CACert")) {
+		cafile := viper.GetString("Mqtt.CACert")
+		log.Printf("TLS CACert %v", cafile)
+		tlsConfig := createTLSConfig(cafile)
+		opts.SetTLSConfig(tlsConfig)
+	}
 
 	topic := viper.GetString("Mqtt.Events.SubscribeTopic")
 	deviceTopic := viper.GetString("Mqtt.Events.SubscribeDeviceEvents")
